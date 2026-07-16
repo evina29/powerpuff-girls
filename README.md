@@ -1,7 +1,8 @@
-# 🪄 Magic Outpost
+# ESKape the Spell
 
-A real-time wizard-duel browser game, designed to be controlled by **ESP32
-gesture-recognition magic wands** — playable today with the keyboard.
+A real-time wizard-duel browser game by **Eskade** (Evina, Shrey and Katy),
+designed to be controlled by **ESP32 gesture-recognition magic wands** and
+playable today with the keyboard.
 
 Built with **pure HTML + CSS + JavaScript** (Canvas 2D + Web Audio). No
 frameworks, no build step, no binary assets — all art, backgrounds, portraits

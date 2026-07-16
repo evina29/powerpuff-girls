@@ -46,7 +46,7 @@ class ESP32BluetoothInput extends InputSource {
     // char.addEventListener('characteristicvaluechanged',
     //   (e) => this.parseESP32Data(new TextDecoder().decode(e.target.value)));
     // this.connected = true;
-    throw new Error('ESP32 Bluetooth wands not built yet — placeholder.');
+    throw new Error('ESP32 Bluetooth wands are not built yet.');
   }
 
   /** PLACEHOLDER — called for each raw chunk received from the wand. */
@@ -105,7 +105,7 @@ class ESP32SerialInput extends InputSource {
     //   if (done) break;
     //   this.receiveSpell(decoder.decode(value));
     // }
-    throw new Error('ESP32 Serial wands not built yet — placeholder.');
+    throw new Error('ESP32 Serial wands are not built yet.');
   }
 
   /** Buffer partial chunks until a full newline-terminated command arrives. */

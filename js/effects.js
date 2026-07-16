@@ -214,6 +214,31 @@ class ParticleSystem {
     }));
   }
 
+  /** Gold star dust trailing the cursor on menu screens. */
+  cursorTrail(x, y) {
+    this.emit(2, () => ({
+      x: x + rand(-4, 4), y: y + rand(-4, 4),
+      vx: rand(-25, 25), vy: rand(-40, 10),
+      life: rand(0.4, 0.9), size: rand(2, 5), shape: 'star',
+      spin: rand(-6, 6), drag: 0.94,
+      color: pick([[239, 227, 168], [255, 250, 220], [255, 255, 255]])
+    }));
+  }
+
+  /** Grand-entry starburst when the main page appears. */
+  grandBurst(cx, cy) {
+    this.emit(70, () => {
+      const a = Math.random() * Math.PI * 2, sp = rand(120, 620);
+      return {
+        x: cx, y: cy,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        life: rand(0.8, 1.7), size: rand(3, 8), shape: 'star',
+        spin: rand(-8, 8), drag: 0.9,
+        color: pick([[239, 227, 168], [255, 255, 255], [255, 240, 190], [200, 190, 255]])
+      };
+    });
+  }
+
   /** Swirling magic portal ring (battle intro). */
   portal(x, y, t) {
     this.emit(3, (i) => {
@@ -254,7 +279,7 @@ class FloatingTextSystem {
       const a = Math.min(1, t.life / (t.maxLife * 0.4));
       const pop = 1 + Math.max(0, (t.life / t.maxLife) - 0.85) * 4; // pop-in scale
       ctx.globalAlpha = a;
-      ctx.font = `${Math.round(t.size * pop * 0.8)}px 'Press Start 2P', monospace`;
+      ctx.font = `800 ${Math.round(t.size * pop * 1.1)}px Manrope, sans-serif`;
       ctx.lineWidth = 4;
       ctx.strokeStyle = 'rgba(0,0,0,0.75)';
       ctx.strokeText(t.text, t.x, t.y);

@@ -135,7 +135,7 @@ class Battle {
     } else {
       this.camera.shake(9, 0.3);
     }
-    this.floats.add(hx, hy - 40, `-${taken}`,
+    this.floats.add(hx, hy - 40, `${taken}`,
                     { color: crit ? '#ffd94a' : '#ff6b6b', size: crit ? 40 : 30 });
 
     if (!target.alive) this.endBattle(attacker);
@@ -243,11 +243,11 @@ class Battle {
       const scale = 1 + (1 - Math.max(0, frac)) * 0.25;
       ctx.save();
       ctx.textAlign = 'center';
-      ctx.font = `${Math.round((count > 0 ? 84 : 52) * scale)}px 'Press Start 2P', monospace`;
+      ctx.font = `800 ${Math.round((count > 0 ? 130 : 100) * scale)}px Manrope, sans-serif`;
       ctx.lineWidth = 8;
       ctx.strokeStyle = 'rgba(4,8,20,0.75)';
       ctx.strokeText(label, W / 2, H * 0.42);
-      ctx.fillStyle = count > 0 ? '#7fd4ff' : '#ffd75e';
+      ctx.fillStyle = count > 0 ? '#ffffff' : '#efe3a8';
       ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 30;
       ctx.fillText(label, W / 2, H * 0.42);
       ctx.restore();
@@ -256,9 +256,9 @@ class Battle {
     // Arena name watermark
     ctx.save();
     ctx.globalAlpha = 0.5;
-    ctx.font = "10px 'Press Start 2P', monospace";
+    ctx.font = "italic 600 17px 'Playfair Display', serif";
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffd6ee';
+    ctx.fillStyle = '#efe3a8';
     ctx.fillText(this.arena.name, W / 2, H - 8);
     ctx.restore();
   }

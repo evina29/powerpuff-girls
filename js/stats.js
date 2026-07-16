@@ -90,7 +90,7 @@ class Stats {
   }
 
   static formatTime(sec) {
-    if (sec === null || sec === undefined) return '—';
+    if (sec === null || sec === undefined) return 'not yet';
     sec = Math.round(sec);
     const m = Math.floor(sec / 60), s = sec % 60;
     return `${m}:${String(s).padStart(2, '0')}`;

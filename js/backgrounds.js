@@ -1,9 +1,8 @@
 /* ============================================================
-   BACKGROUNDS — fully procedural animated arenas (Canvas 2D).
+   BACKGROUNDS — fully procedural animated scenes (Canvas 2D).
    Each background exposes draw(ctx, W, H, t) where t = seconds.
    Static layout elements are randomized once in the constructor
    so every match looks slightly different.
-   Replace with painted art in assets/backgrounds later if desired.
    ============================================================ */
 
 /** Shared starfield helper. */
@@ -24,90 +23,108 @@ function makeStars(n) {
   }));
 }
 
-/* ---------------- MAIN MENU: floating castle ---------------- */
+/* ---------------- MAIN MENU: deep space (Stardance style) ----------------
+   If assets/backgrounds/menu.png exists it is used as the backdrop
+   (drawn pixel-crisp, cover-cropped). Otherwise: a quiet starfield
+   with soft nebula streaks and twinkling gold four-point sparkles. */
 class MenuBackground {
   constructor() {
-    this.name = 'Floating Castle';
-    this.stars = makeStars(90);
-    this.clouds = Array.from({ length: 6 }, () => ({
-      x: Math.random(), y: rand(0.1, 0.55), w: rand(0.18, 0.4), speed: rand(0.006, 0.02)
+    this.name = 'Deep Space';
+    // Optional real background image (drop the file in, refresh — done)
+    this.image = new Image();
+    this.imageReady = false;
+    this.image.onload = () => { this.imageReady = true; };
+    this.image.src = 'assets/backgrounds/menu.png';
+
+    this.stars = Array.from({ length: 130 }, () => ({
+      x: Math.random(), y: Math.random(),
+      size: rand(0.8, 2.2), speed: rand(0.4, 1.8), phase: rand(0, 6.28)
     }));
-    this.motes = Array.from({ length: 40 }, () => ({
-      x: Math.random(), y: Math.random(), speed: rand(0.01, 0.04), phase: rand(0, 6.28)
+    // Gold four-point sparkles
+    this.sparkles = Array.from({ length: 9 }, () => ({
+      x: rand(0.05, 0.95), y: rand(0.06, 0.9),
+      size: rand(6, 16), speed: rand(0.6, 1.4), phase: rand(0, 6.28)
+    }));
+    // Soft nebula blobs, drifting extremely slowly
+    this.nebulas = Array.from({ length: 5 }, () => ({
+      x: Math.random(), y: Math.random(), r: rand(0.25, 0.5),
+      hue: pick([[120, 90, 200], [90, 70, 160], [150, 90, 170]]),
+      drift: rand(0.002, 0.006), phase: rand(0, 6.28)
     }));
   }
 
-  draw(ctx, W, H, t) {
-    // Night sky
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, '#04060f'); sky.addColorStop(0.6, '#0b1228'); sky.addColorStop(1, '#152246');
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  /** One four-point star, Stardance style. */
+  _sparkle(ctx, x, y, size, alpha) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#efe3a8';
+    ctx.shadowColor = '#efe3a8';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(0, -size);
+    ctx.quadraticCurveTo(size * 0.14, -size * 0.14, size, 0);
+    ctx.quadraticCurveTo(size * 0.14, size * 0.14, 0, size);
+    ctx.quadraticCurveTo(-size * 0.14, size * 0.14, -size, 0);
+    ctx.quadraticCurveTo(-size * 0.14, -size * 0.14, 0, -size);
+    ctx.fill();
+    ctx.restore();
+  }
 
+  draw(ctx, W, H, t) {
+    // Real background image (cover-cropped, crisp pixels)
+    if (this.imageReady) {
+      const iw = this.image.width, ih = this.image.height;
+      const scale = Math.max(W / iw, H / ih);
+      const dw = iw * scale, dh = ih * scale;
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(this.image, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      ctx.restore();
+      return;
+    }
+
+    // Deep space base
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#120e1b');
+    sky.addColorStop(0.5, '#17131f');
+    sky.addColorStop(1, '#1c1526');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Faint nebula streaks
+    for (const n of this.nebulas) {
+      const nx = ((n.x + t * n.drift) % 1.4 - 0.2) * W;
+      const ny = n.y * H + Math.sin(t * 0.1 + n.phase) * 20;
+      const r = n.r * Math.max(W, H);
+      const [cr, cg, cb] = n.hue;
+      const g = ctx.createRadialGradient(nx, ny, r * 0.1, nx, ny, r);
+      g.addColorStop(0, `rgba(${cr},${cg},${cb},0.07)`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(nx, ny, r, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Thin elegant arc lines (like the Stardance connector strokes)
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-40, H * 0.28);
+    ctx.bezierCurveTo(W * 0.3, H * 0.12, W * 0.6, H * 0.34, W + 40, H * 0.18);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-40, H * 0.78);
+    ctx.bezierCurveTo(W * 0.35, H * 0.92, W * 0.7, H * 0.7, W + 40, H * 0.86);
+    ctx.stroke();
+
+    // Starfield
     drawStars(ctx, this.stars, W, H, t);
 
-    // Moon with halo
-    const mx = W * 0.8, my = H * 0.18;
-    const halo = ctx.createRadialGradient(mx, my, 20, mx, my, 130);
-    halo.addColorStop(0, 'rgba(230,240,255,0.55)'); halo.addColorStop(1, 'rgba(230,240,255,0)');
-    ctx.fillStyle = halo; ctx.fillRect(mx - 140, my - 140, 280, 280);
-    ctx.fillStyle = '#e8eeff';
-    ctx.beginPath(); ctx.arc(mx, my, 42, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(180,195,230,0.5)';
-    ctx.beginPath(); ctx.arc(mx - 12, my - 8, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(mx + 14, my + 10, 6, 0, Math.PI * 2); ctx.fill();
-
-    // Drifting clouds
-    for (const c of this.clouds) {
-      const cx = ((c.x + t * c.speed) % 1.3 - 0.15) * W;
-      const cy = c.y * H, cw = c.w * W;
-      ctx.fillStyle = 'rgba(150,170,220,0.14)';
-      for (let i = 0; i < 4; i++) {
-        ctx.beginPath();
-        ctx.ellipse(cx + i * cw * 0.2, cy + Math.sin(i * 2) * 8, cw * 0.22, cw * 0.09, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // Floating castle silhouette (gently bobbing)
-    const bob = Math.sin(t * 0.6) * 10;
-    const cx = W * 0.5, cy = H * 0.62 + bob;
-    ctx.save();
-    ctx.translate(cx, cy);
-    const scale = Math.min(W, H * 1.6) / 900;
-    ctx.scale(scale, scale);
-    ctx.fillStyle = '#0a0f28';
-    // Floating island base
-    ctx.beginPath();
-    ctx.moveTo(-260, 40);
-    ctx.quadraticCurveTo(-140, 150, 0, 170);
-    ctx.quadraticCurveTo(140, 150, 260, 40);
-    ctx.closePath(); ctx.fill();
-    // Keep + towers
-    ctx.fillRect(-180, -60, 360, 100);
-    for (const [tx, tw, th] of [[-220, 60, 190], [160, 60, 190], [-60, 120, 260]]) {
-      ctx.fillRect(tx, -th + 40, tw, th);
-      ctx.beginPath(); // conical roof
-      ctx.moveTo(tx - 12, -th + 40);
-      ctx.lineTo(tx + tw / 2, -th - 55);
-      ctx.lineTo(tx + tw + 12, -th + 40);
-      ctx.closePath(); ctx.fill();
-    }
-    // Glowing windows
-    ctx.fillStyle = '#7fd4ff';
-    ctx.shadowColor = '#7fd4ff'; ctx.shadowBlur = 12;
-    for (const [wx, wy] of [[-195, -60], [185, -60], [-15, -130], [-15, -40], [-195, 0], [185, 0]]) {
-      ctx.fillRect(wx, wy, 10, 18);
-    }
-    ctx.shadowBlur = 0;
-    ctx.restore();
-
-    // Rising magical motes
-    for (const m of this.motes) {
-      const y = (1 - ((m.y + t * m.speed) % 1)) * H;
-      const x = (m.x + Math.sin(t + m.phase) * 0.01) * W;
-      const a = 0.3 + 0.4 * Math.sin(t * 2 + m.phase);
-      ctx.fillStyle = `rgba(127,212,255,${Math.max(0, a)})`;
-      ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+    // Twinkling gold sparkles
+    for (const s of this.sparkles) {
+      const a = 0.35 + 0.6 * Math.max(0, Math.sin(t * s.speed + s.phase));
+      const size = s.size * (0.85 + 0.2 * Math.sin(t * s.speed * 1.7 + s.phase));
+      this._sparkle(ctx, s.x * W, s.y * H, size, a);
     }
   }
 }

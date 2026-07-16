@@ -40,8 +40,36 @@ class Game {
     this._resize();
     window.addEventListener('resize', () => this._resize());
 
+    // Gold star dust follows the cursor on every non-battle screen
+    this._lastMouse = { x: -999, y: -999 };
+    window.addEventListener('mousemove', (e) => this._onMouseTrail(e));
+
     this._lastT = performance.now();
     requestAnimationFrame((t) => this._frame(t));
+
+    this._grandEntry(); // sparkle burst on first load
+  }
+
+  /** Spawn star dust along the cursor path (menus only, throttled). */
+  _onMouseTrail(e) {
+    if (this.state === 'battle') return;
+    // Convert CSS pixels to canvas pixels (resolution setting scales them)
+    const sx = this.canvas.width / window.innerWidth;
+    const sy = this.canvas.height / window.innerHeight;
+    const x = e.clientX * sx, y = e.clientY * sy;
+    const dx = x - this._lastMouse.x, dy = y - this._lastMouse.y;
+    if (dx * dx + dy * dy < 36) return; // only when actually moving
+    this._lastMouse = { x, y };
+    this.fxParticles.cursorTrail(x, y);
+  }
+
+  /** Grand entrance: a golden starburst over the main page. */
+  _grandEntry() {
+    const W = this.canvas.width, H = this.canvas.height;
+    this.fxParticles.grandBurst(W / 2, H * 0.42);
+    // Two smaller side bursts, slightly delayed for drama
+    setTimeout(() => this.fxParticles.grandBurst(W * 0.22, H * 0.3), 180);
+    setTimeout(() => this.fxParticles.grandBurst(W * 0.78, H * 0.3), 320);
   }
 
   /* ---------------- Input wiring ---------------- */
@@ -129,12 +157,15 @@ class Game {
     document.getElementById('btn-accept').addEventListener('click', () => this._acceptPortrait());
     document.getElementById('btn-skip-cam').addEventListener('click', () => this._skipCamera());
 
-    // ESP32 wand connections (placeholders until hardware exists)
-    document.getElementById('btn-connect-bt').addEventListener('click', async (e) => {
+    // ESP32 wand connections (optional UI — connect from DevTools too:
+    // game.wandBT.connectBluetooth() / game.wandSerial.connectSerial())
+    const btBtn = document.getElementById('btn-connect-bt');
+    if (btBtn) btBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       await this._connectWand(this.wandBT.connectBluetooth.bind(this.wandBT), 'Bluetooth');
     });
-    document.getElementById('btn-connect-serial').addEventListener('click', async (e) => {
+    const serialBtn = document.getElementById('btn-connect-serial');
+    if (serialBtn) serialBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       await this._connectWand(this.wandSerial.connectSerial.bind(this.wandSerial), 'Serial');
     });
@@ -184,10 +215,13 @@ class Game {
     const status = document.getElementById('wand-status-text');
     try {
       await connectFn();
-      status.textContent = `Wands: ${label} connected`;
+      if (status) status.textContent = `Wands: ${label} connected`;
     } catch (err) {
-      status.textContent = err.message;
-      setTimeout(() => { status.textContent = 'Wands: keyboard mode'; }, 4000);
+      console.warn('[Wand]', err.message);
+      if (status) {
+        status.textContent = err.message;
+        setTimeout(() => { status.textContent = 'Wands: keyboard mode'; }, 4000);
+      }
     }
   }
 
@@ -196,8 +230,8 @@ class Game {
     window.close(); // only works for script-opened windows…
     document.body.innerHTML =
       '<div style="display:flex;height:100vh;align-items:center;justify-content:center;' +
-      "font-family:'Press Start 2P',monospace;font-size:16px;line-height:2;color:#6fb7ff;background:#070b18;text-align:center\">" +
-      'The outpost sleeps.<br>You may close this tab.</div>';
+      "font-family:Manrope,sans-serif;font-weight:800;font-size:26px;line-height:1.8;color:#efe3a8;background:#17131f;text-align:center\">" +
+      'The spell is broken.<br>You may close this tab.</div>';
   }
 
   /* ---------------- Screen management ---------------- */
@@ -213,6 +247,7 @@ class Game {
     this.state = 'menu';
     this.showScreen('screen-menu');
     AudioManager.playMusic('menu');
+    this._grandEntry(); // sparkle burst every time the main page returns
   }
 
   /* ---------------- Webcam portrait flow ---------------- */
@@ -458,7 +493,7 @@ class Game {
 /* ---------------- Boot ---------------- */
 window.addEventListener('DOMContentLoaded', () => {
   window.game = new Game();
-  console.log('%c✦ Magic Outpost ready — may your aim be true. ✦',
+  console.log('%c✦ ESKape the Spell is ready. May your aim be true. ✦',
               'color:#f5c542;font-size:14px');
 
   // Dev/demo shortcut: open index.html#battle to jump straight into a
