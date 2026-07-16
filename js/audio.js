@@ -146,6 +146,9 @@ class AudioManager {
         A.noise({ dur: 0.3, gain: 0.35, freq: 3000, endFreq: 200 });
         A.tone({ freq: 1200, endFreq: 2400, type: 'sine', dur: 0.15, gain: 0.12, when: 0.02 });
         break;
+      case 'tick': // soft spell-wheel step
+        A.tone({ freq: 1100, type: 'sine', dur: 0.04, gain: 0.05 });
+        break;
       case 'countdown':
         A.tone({ freq: 660, type: 'sine', dur: 0.15, gain: 0.2 });
         break;

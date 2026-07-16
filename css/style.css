@@ -393,11 +393,18 @@ html, body {
   padding: 0 26px;
 }
 .spell-bar {
-  display: flex; gap: 10px;
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
   background: var(--panel);
   border: 1.5px solid var(--panel-border);
   border-radius: 14px; padding: 8px 12px;
   backdrop-filter: blur(8px);
+}
+.cast-hint {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 11px; font-weight: 600;
+  color: #8d8ba6;
+  padding-top: 4px;
 }
 .spell-slot {
   width: 54px; height: 54px; border-radius: 10px;
@@ -417,6 +424,13 @@ html, body {
   background: rgba(12, 9, 22, 0.88); height: 0%;
 }
 .spell-slot.ready { border-color: var(--cream); box-shadow: 0 0 12px rgba(239,227,168,0.3); }
+/* The spell wheel's current pick: this is what one button press casts */
+.spell-slot.selected {
+  border: 2px solid var(--cream);
+  box-shadow: 0 0 20px rgba(239,227,168,0.8), inset 0 0 10px rgba(239,227,168,0.25);
+  transform: translateY(-5px) scale(1.1);
+  transition: transform 0.18s ease;
+}
 .spell-slot.flash { animation: slotFlash 0.3s ease; }
 @keyframes slotFlash { 50% { box-shadow: 0 0 26px var(--cream); transform: scale(1.12); } }
 

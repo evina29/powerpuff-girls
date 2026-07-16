@@ -1,13 +1,16 @@
 /* ============================================================
-   ESP32 WAND INPUT — future hardware bridge (placeholders).
+   ESP32 WAND INPUT — hardware bridge (connection placeholders).
 
-   The physical magic wands are ESP32 boards with an IMU that
-   recognize gestures on-device and transmit one plain-text
-   spell command per gesture:
+   THE WAND IS SIMPLE: one button and an LED that lights up
+   when pressed. Each press transmits one line of text:
 
-       FIREBALL\n  LIGHTNING\n  ICE\n  SHIELD\n  HEAL\n
+       CAST\n            (aliases BUTTON / PRESS / ZAP also work)
 
-   Optionally prefixed with a wand id: "P1:FIREBALL".
+   In the game, a spell wheel cycles through the five spells;
+   CAST fires whichever spell is glowing. Multi-wand setups can
+   prefix a player id: "P2:CAST". Fancier future wands may send
+   direct spell names (FIREBALL, LIGHTNING, ICE, SHIELD, HEAL),
+   which the game also accepts unchanged.
 
    Both classes below extend InputSource, so once connected the
    game works WITHOUT ANY MODIFICATION — commands flow through

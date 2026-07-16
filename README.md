@@ -32,6 +32,15 @@ except the webcam (the game offers generated portraits as a fallback).
 
 ## 🎮 Controls
 
+**One-button mode (matches the wand):** a spell wheel cycles through the five
+spells, skipping any on cooldown. Press your button to cast the glowing spell.
+
+| Action | Player 1 | Player 2 | ESP32 wand |
+|--------|:--------:|:--------:|------------|
+| Cast the glowing spell | `Space` | `Enter` | button press sends `CAST` |
+
+**Direct keys (optional keyboard shortcut mode):**
+
 | Spell        | Player 1 | Player 2 | ESP32 wand command |
 |--------------|:--------:|:--------:|--------------------|
 | 🔥 Fireball  — 20 dmg           | `Q` | `U` | `FIREBALL`  |
@@ -99,11 +108,13 @@ assets/               drop-in folders for real art/audio later (see assets/READM
 `SHIELD`, `HEAL`. The keyboard, the AI, and the future wands are all just
 `InputSource` subclasses; battle logic cannot tell them apart.
 
-The wand firmware only needs to send one line of text per recognized gesture:
+The wand is deliberately simple: **one button + one LED**. The firmware sends
+one line of text per press (and lights the LED for feedback):
 
 ```
-FIREBALL\n          → casts for that wand's assigned player
-P2:LIGHTNING\n      → optional player prefix for multi-wand setups
+CAST\n              → casts the spell currently glowing on the wheel
+P2:CAST\n           → optional player prefix for multi-wand setups
+FIREBALL\n          → direct spell names also work (future gesture wands)
 ```
 
 Placeholders ready in `js/esp32.js`:

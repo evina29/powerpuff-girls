@@ -30,7 +30,10 @@ class InputSource {
 
 /** Central hub. Game code subscribes with onCommand(). */
 class InputManager {
-  static COMMANDS = ['FIREBALL', 'LIGHTNING', 'ICE', 'SHIELD', 'HEAL'];
+  // CAST = the one-button wand: casts whatever the spell wheel has lit
+  static COMMANDS = ['FIREBALL', 'LIGHTNING', 'ICE', 'SHIELD', 'HEAL', 'CAST'];
+  // Friendly aliases the wand firmware may send instead of CAST
+  static ALIASES = { BUTTON: 'CAST', PRESS: 'CAST', ZAP: 'CAST' };
 
   constructor() {
     this.sources = [];
@@ -50,6 +53,7 @@ class InputManager {
   /** Validate and broadcast a command to all listeners. */
   dispatch(playerIndex, command, sourceName = 'unknown') {
     command = String(command).toUpperCase().trim();
+    command = InputManager.ALIASES[command] || command;
     if (!InputManager.COMMANDS.includes(command)) return;
     this.listeners.forEach(fn => fn(playerIndex, command, sourceName));
   }
@@ -63,6 +67,9 @@ class InputManager {
    ------------------------------------------------------------ */
 class KeyboardInput extends InputSource {
   static MAP = {
+    // One-button mode (mirrors the wand): cast the glowing spell
+    Space: [1, 'CAST'], Enter: [2, 'CAST'],
+    // Direct spell keys still work for keyboard purists
     KeyQ: [1, 'FIREBALL'], KeyW: [1, 'LIGHTNING'], KeyE: [1, 'ICE'],
     KeyR: [1, 'SHIELD'],   KeyT: [1, 'HEAL'],
     KeyU: [2, 'FIREBALL'], KeyI: [2, 'LIGHTNING'], KeyO: [2, 'ICE'],

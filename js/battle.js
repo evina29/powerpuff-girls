@@ -1,4 +1,47 @@
 /* ============================================================
+   SPELL WHEEL — the one-button wand mechanic.
+   The highlight cycles through the five spells on its own,
+   skipping any still on cooldown. One press of the wand button
+   (or Space / Enter) casts whichever spell is glowing.
+   ============================================================ */
+class SpellWheel {
+  static INTERVAL = 0.85; // seconds per step
+
+  constructor(player) {
+    this.player = player;
+    this.order = ['FIREBALL', 'LIGHTNING', 'ICE', 'SHIELD', 'HEAL'];
+    this.index = 0;
+    this.timer = 0;
+  }
+
+  current() { return this.order[this.index]; }
+
+  /** Move to the next castable spell (or just the next one). */
+  advance() {
+    for (let i = 1; i <= this.order.length; i++) {
+      const idx = (this.index + i) % this.order.length;
+      if (this.player.isReady(this.order[idx])) { this.index = idx; return true; }
+    }
+    this.index = (this.index + 1) % this.order.length;
+    return false;
+  }
+
+  update(dt) {
+    this.timer += dt;
+    // If the lit spell went on cooldown, jump off it immediately
+    if (!this.player.isReady(this.current())) {
+      this.advance();
+      this.timer = 0;
+      return;
+    }
+    if (this.timer >= SpellWheel.INTERVAL) {
+      this.timer = 0;
+      if (this.advance()) AudioManager.play('tick');
+    }
+  }
+}
+
+/* ============================================================
    BATTLE — the real-time duel scene.
    Owns the two wizards, projectiles/beams, particle systems,
    camera feedback, the AI controller, the DOM HUD and the
@@ -35,6 +78,12 @@ class Battle {
 
     this.W = 1280; this.H = 720;             // updated every frame from canvas
 
+    // One-button spell wheels for the human players (AI casts directly)
+    this.wheels = {
+      1: new SpellWheel(this.players[0]),
+      2: this.players[1].isAI ? null : new SpellWheel(this.players[1])
+    };
+
     // AI opponent (single player) speaks through the InputManager
     this.ai = null;
     if (this.mode === 'single') {
@@ -52,6 +101,14 @@ class Battle {
     if (this.state !== 'fighting') return;
     const caster = this.players[playerIndex - 1];
     if (!caster || !caster.alive) return;
+
+    // One-button wand: cast whatever the spell wheel has lit
+    if (command === 'CAST') {
+      const wheel = this.wheels[playerIndex];
+      if (!wheel) return;
+      command = wheel.current();
+    }
+
     const spell = Spell.get(command);
     if (!spell || !caster.isReady(spell.id)) return;
     this.cast(caster, spell);
@@ -193,6 +250,9 @@ class Battle {
     if (this.state === 'fighting') {
       this.duration += dt;
       if (this.ai) this.ai.update(dt);
+      for (const wheel of Object.values(this.wheels)) {
+        if (wheel) wheel.update(dt);
+      }
     }
 
     // Projectiles — apply hit when they land
@@ -229,6 +289,24 @@ class Battle {
 
     this.camera.preRender(ctx);
     for (const p of this.players) p.render(ctx, t);
+
+    // Floating "spell you will cast" icon above each human wizard
+    if (this.state === 'fighting') {
+      for (const p of this.players) {
+        const wheel = this.wheels[p.index];
+        if (!wheel) continue;
+        const spell = Spell.get(wheel.current());
+        const icon = IconFactory.image(spell.icon);
+        if (!icon.complete || !icon.naturalWidth) continue;
+        const bob = Math.sin(t * 4) * 4;
+        const pulse = 0.7 + 0.3 * Math.sin(t * 6);
+        ctx.save();
+        ctx.globalAlpha = pulse;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(icon, p.x - 14, p.y - 200 + bob, 28, 28);
+        ctx.restore();
+      }
+    }
     for (const proj of this.projectiles) proj.render(ctx);
     for (const beam of this.beams) beam.render(ctx);
     this.particles.render(ctx);
@@ -313,6 +391,14 @@ class BattleHUD {
         bar.appendChild(slot);
         this.slots[p.index][spell.id] = slot;
       }
+      // One-button hint under the slots (humans only)
+      if (!p.isAI) {
+        const hint = document.createElement('div');
+        hint.className = 'cast-hint';
+        hint.textContent = (p.index === 1 ? 'SPACE' : 'ENTER') +
+          ' or wand button casts the glowing spell';
+        bar.appendChild(hint);
+      }
       // Top cooldown pips
       const row = document.getElementById(`hud-p${p.index}-cds`);
       row.innerHTML = '';
@@ -350,12 +436,14 @@ class BattleHUD {
       document.getElementById(`hud-p${p.index}-hptext`).textContent =
         `${Math.ceil(p.hp)} / ${Player.MAX_HP}`;
 
-      // Cooldown overlays (bottom slots + top pips)
+      // Cooldown overlays (bottom slots + top pips) + wheel highlight
+      const wheel = this.battle.wheels[p.index];
       for (const spell of Spell.list()) {
         const frac = Math.min(1, (p.cooldowns[spell.id] || 0) / spell.cooldown);
         const slot = this.slots[p.index][spell.id];
         slot.querySelector('.cool').style.height = (frac * 100) + '%';
         slot.classList.toggle('ready', frac === 0);
+        slot.classList.toggle('selected', !!wheel && wheel.current() === spell.id);
         const pip = this.pips[p.index][spell.id];
         pip.querySelector('.cd-fill').style.height = (frac * 100) + '%';
         pip.classList.toggle('ready', frac === 0);
