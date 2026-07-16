@@ -164,13 +164,17 @@ class PortraitFactory {
    * assets/characters/{id}.png replaces the procedural sprite.
    */
   static loadOverrides(onLoaded) {
-    for (const c of PortraitFactory.CHARACTERS) {
+    const ids = [
+      ...PortraitFactory.CHARACTERS.map(c => c.id),
+      'player1', 'player2' // default human avatars (no-camera fallback)
+    ];
+    for (const id of ids) {
       const img = new Image();
       img.onload = () => {
-        PortraitFactory.overrides[c.id] = img;
-        if (onLoaded) onLoaded(c.id);
+        PortraitFactory.overrides[id] = img;
+        if (onLoaded) onLoaded(id);
       };
-      img.src = `assets/characters/${c.id}.png`;
+      img.src = `assets/characters/${id}.png`;
     }
   }
 
@@ -351,10 +355,127 @@ class PortraitFactory {
     return { name: c.name, portrait: PortraitFactory.characterPortrait(c), id: c.id };
   }
 
+  /* -------- default human avatars (no-camera fallback) --------
+     Two hand-made pixel sprites on a lavender badge. Drop real
+     art into assets/characters/player1.png / player2.png to
+     replace them (see loadOverrides). '.' = transparent. */
+  static PLAYER_SPRITES = {
+    player1: { // green-haired kid: orange jacket, blue vest
+      colors: {
+        k: '#221650', g: '#3fae4a', G: '#2d7d36', d: '#2a1e5e',
+        s: '#e8a877', S: '#cf8f63', o: '#f26a2a', b: '#4a3ecf',
+        B: '#372ba0', e: '#3fae4a'
+      },
+      rows: [
+        '....kkkkkkkk....',
+        '..kkggggggggkk..',
+        '.kgggGggggGgggk.',
+        '.kgggggGggggggk.',
+        '.kkggggggggggkk.',
+        '..kddddddddddk..',
+        '..kddddddddddk..',
+        '..kssssssssssk..',
+        '..kssssssssssk..',
+        '..ksSssssssSsk..',
+        '...kssssssssk...',
+        '.....kssssk.....',
+        '..kobbbbbbbbok..',
+        '.koobBbbbbBbook.',
+        '.koobBbbbbBbook.',
+        '.koobbbbbbbbook.',
+        '.ksobbbbbbbbosk.',
+        '..kkbbbbbbbbkk..',
+        '...kooooooook...',
+        '...koookkoook...',
+        '...koookkoook...',
+        '...koookkoook...',
+        '..keeek..keeek..',
+        '..kkkkk..kkkkk..'
+      ]
+    },
+    player2: { // blonde girl: pink bow, pink sweater, blue shorts
+      colors: {
+        k: '#221650', y: '#f2c53d', p: '#e83a9c', P: '#b8237a',
+        s: '#f0b58a', e: '#d92a8a', b: '#4a90e8', B: '#3570c4',
+        c: '#c73a86', h: '#d9418f'
+      },
+      rows: [
+        '...kpk....kpk...',
+        '..kpppk..kpppk..',
+        '..kppppkkppppk..',
+        '...kppkyykppk...',
+        '..kyyyyyyyyyyk..',
+        '.kyyyyyyyyyyyyk.',
+        '.kyyksssssskyyk.',
+        '.kyykessssekyyk.',
+        '.kyyksssssskyyk.',
+        '.kyyksssssskyyk.',
+        '.kyyyksssskyyyk.',
+        '..ky..kssk..yk..',
+        '..kppppppppppk..',
+        '.ksppppppppppsk.',
+        '.ksppPppppPppsk.',
+        '.ksppppppppppsk.',
+        '..kkppppppppkk..',
+        '...kbbbbbbbbk...',
+        '...kbbBbbBbbk...',
+        '...kbbk..kbbk...',
+        '...kssk..kcck...',
+        '...kssk..kcck...',
+        '...khhk..khhk...',
+        '...kkkk..kkkk...'
+      ]
+    }
+  };
+
+  /** Render a string pixel map (rows + color table) to a canvas. */
+  static drawPixelMap(map, scale = 8) {
+    const GW = 16, GH = map.rows.length;
+    const cv = document.createElement('canvas');
+    cv.width = GW * scale; cv.height = GH * scale;
+    const ctx = cv.getContext('2d');
+    map.rows.forEach((row, y) => {
+      const line = row.padEnd(GW, '.').slice(0, GW);
+      for (let x = 0; x < GW; x++) {
+        const col = map.colors[line[x]];
+        if (!col) continue;
+        ctx.fillStyle = col;
+        ctx.fillRect(x * scale, y * scale, scale, scale);
+      }
+    });
+    return cv;
+  }
+
   /** Fallback portrait for a human player without a camera. */
   static defaultHuman(playerIndex) {
-    const c = PortraitFactory.byId(playerIndex === 1 ? 'hero' : 'witch');
-    return PortraitFactory.characterPortrait(c);
+    const key = playerIndex === 1 ? 'player1' : 'player2';
+    const S = 256;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = S;
+    const ctx = cv.getContext('2d');
+
+    // Lavender badge, matching the sprites' original background
+    ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = '#c6c2f0';
+    ctx.fillRect(0, 0, S, S);
+
+    ctx.imageSmoothingEnabled = false;
+    const override = PortraitFactory.overrides[key];
+    if (override) {
+      const r = Math.min(200 / override.width, 220 / override.height);
+      const w = override.width * r, h = override.height * r;
+      ctx.drawImage(override, (S - w) / 2, (S - h) / 2, w, h);
+    } else {
+      const sprite = PortraitFactory.drawPixelMap(PortraitFactory.PLAYER_SPRITES[key], 9);
+      ctx.drawImage(sprite, (S - sprite.width) / 2, (S - sprite.height) / 2);
+    }
+
+    // Deep navy ring, same ink as the sprite outlines
+    ctx.strokeStyle = 'rgba(34, 22, 80, 0.9)';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2 - 3, 0, Math.PI * 2); ctx.stroke();
+
+    return cv.toDataURL('image/png');
   }
 }
 
