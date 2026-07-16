@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magic Outpost — Wizard Duel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ GAME CANVAS (backgrounds + battle rendering) ============ -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Screen flash overlay (hit feedback) -->
+  <div id="fx-flash"></div>
+
+  <!-- ============ MAIN MENU (landing page) ============ -->
+  <div class="screen active" id="screen-menu">
+    <header class="menu-nav">
+      <div class="nav-logo"><img data-icon="flag" class="pix-icon flag" alt=""> Magic Outpost</div>
+      <nav class="nav-links">
+        <a href="#" class="nav-link" data-action="stats">Statistics</a>
+        <a href="#" class="nav-link" data-action="settings">Settings</a>
+        <a href="#" class="nav-link" data-action="credits">Credits</a>
+        <a href="#" class="nav-link" data-action="exit">Exit</a>
+      </nav>
+      <button class="btn pill-dark" data-action="start">Join the duel</button>
+    </header>
+
+    <!-- Tilted character cards hugging the screen edges -->
+    <div class="polaroids" id="menu-polaroids"></div>
+
+    <div class="hero">
+      <div class="announce"><img data-icon="wand" class="pix-icon" alt="">
+        Check out the ESP32 magic wands — coming soon <span>→</span></div>
+      <h1 class="hero-title">Where <span class="grad">heroes</span><br>make cool spells.</h1>
+      <p class="hero-sub">Magic Outpost is a real-time duel of gesture &amp; sorcery —
+        sling fireballs, shields and blizzards against a friend or a crafty AI.</p>
+      <div class="hero-cta">
+        <input type="text" id="hero-name" class="hero-input" maxlength="14" placeholder="Your hero name…">
+        <button class="btn pill-dark big" data-action="start">Duel!</button>
+      </div>
+      <div class="hero-note">For heroes of all ages. By continuing, you agree to <em>have fun</em>.</div>
+    </div>
+
+    <div class="wand-status" id="wand-status"><img data-icon="wand" class="pix-icon" alt="">
+      <span id="wand-status-text">Wands: keyboard mode</span> &nbsp;·&nbsp;
+      <a href="#" id="btn-connect-bt">Connect Bluetooth</a> ·
+      <a href="#" id="btn-connect-serial">Connect Serial</a>
+    </div>
+  </div>
+
+  <!-- ============ MODE SELECT ============ -->
+  <div class="screen" id="screen-mode">
+    <h2 class="screen-title">Choose Your Battle</h2>
+    <div class="card-row">
+      <button class="mode-card" data-mode="single">
+        <div class="mode-icon"><img data-char="hero" alt=""></div>
+        <h3>Single Player</h3>
+        <p>Duel an enchanted AI hero</p>
+      </button>
+      <button class="mode-card" data-mode="two">
+        <div class="mode-icon"><img data-char="knight" alt=""><img data-char="witch" alt=""></div>
+        <h3>Two Player</h3>
+        <p>Face a friend on one keyboard</p>
+      </button>
+    </div>
+    <button class="btn btn-back" data-action="back-menu">← Back</button>
+  </div>
+
+  <!-- ============ WEBCAM CAPTURE ============ -->
+  <div class="screen" id="screen-webcam">
+    <h2 class="screen-title" id="webcam-title">Player 1 — Strike a Wizardly Pose!</h2>
+    <div class="webcam-stage">
+      <div class="portrait-ring">
+        <video id="webcam-video" autoplay playsinline muted></video>
+        <canvas id="webcam-preview" class="hidden"></canvas>
+      </div>
+    </div>
+    <input type="text" id="player-name-input" class="name-input" maxlength="14" placeholder="Enter wizard name">
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-capture">Capture</button>
+      <button class="btn hidden" id="btn-retake">Retake</button>
+      <button class="btn btn-primary hidden" id="btn-accept">Accept</button>
+      <button class="btn" id="btn-skip-cam">Skip (no camera)</button>
+    </div>
+    <p class="hint" id="webcam-hint">Camera needs HTTPS or localhost. Skipping uses a generated portrait.</p>
+  </div>
+
+  <!-- ============ AI DIFFICULTY ============ -->
+  <div class="screen" id="screen-difficulty">
+    <h2 class="screen-title">Choose AI Difficulty</h2>
+    <div class="card-row">
+      <button class="mode-card diff" data-diff="easy"><div class="mode-icon"><img data-icon="moon" alt=""></div><h3>Easy</h3><p>A sleepy apprentice</p></button>
+      <button class="mode-card diff" data-diff="medium"><div class="mode-icon"><img data-icon="star" alt=""></div><h3>Medium</h3><p>A studied sorcerer</p></button>
+      <button class="mode-card diff" data-diff="hard"><div class="mode-icon"><img data-icon="skull" alt=""></div><h3>Hard</h3><p>An archmage of war</p></button>
+    </div>
+    <button class="btn btn-back" data-action="back-menu">← Back</button>
+  </div>
+
+  <!-- ============ BATTLE HUD ============ -->
+  <div id="battle-hud" class="hidden">
+    <div class="hud-player" id="hud-p1">
+      <img class="hud-portrait" id="hud-p1-portrait" alt="P1">
+      <div class="hud-info">
+        <div class="hud-name" id="hud-p1-name">Player 1</div>
+        <div class="hp-bar"><div class="hp-fill" id="hud-p1-hp"></div><span class="hp-text" id="hud-p1-hptext">100</span></div>
+        <div class="cd-row" id="hud-p1-cds"></div>
+        <div class="status-row" id="hud-p1-status"></div>
+      </div>
+    </div>
+    <div class="hud-timer" id="hud-timer">0:00</div>
+    <div class="hud-player right" id="hud-p2">
+      <div class="hud-info">
+        <div class="hud-name" id="hud-p2-name">Player 2</div>
+        <div class="hp-bar"><div class="hp-fill" id="hud-p2-hp"></div><span class="hp-text" id="hud-p2-hptext">100</span></div>
+        <div class="cd-row right" id="hud-p2-cds"></div>
+        <div class="status-row right" id="hud-p2-status"></div>
+      </div>
+      <img class="hud-portrait" id="hud-p2-portrait" alt="P2">
+    </div>
+    <div class="hud-bottom">
+      <div class="spell-bar" id="spellbar-p1"></div>
+      <div class="spell-bar right" id="spellbar-p2"></div>
+    </div>
+  </div>
+
+  <!-- ============ WIN SCREEN ============ -->
+  <div class="screen" id="screen-win">
+    <h2 class="win-title" id="win-title">Victory!</h2>
+    <div class="win-portrait-ring"><img id="win-portrait" alt="Winner"></div>
+    <div class="win-name" id="win-name"></div>
+    <div class="win-stats" id="win-stats"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" data-action="play-again">Play Again</button>
+      <button class="btn" data-action="back-menu">Main Menu</button>
+    </div>
+  </div>
+
+  <!-- ============ STATISTICS ============ -->
+  <div class="screen" id="screen-stats">
+    <h2 class="screen-title">Hall of Records</h2>
+    <div class="stats-grid" id="stats-grid"></div>
+    <button class="btn btn-back" data-action="back-menu">← Back</button>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div class="screen" id="screen-settings">
+    <h2 class="screen-title">Settings</h2>
+    <div class="settings-panel">
+      <label class="setting-row">Music Volume
+        <input type="range" id="set-music" min="0" max="100" value="60"></label>
+      <label class="setting-row">Effects Volume
+        <input type="range" id="set-sfx" min="0" max="100" value="80"></label>
+      <label class="setting-row">Resolution
+        <select id="set-resolution">
+          <option value="0.75">Low (960×540)</option>
+          <option value="1" selected>Medium (1280×720)</option>
+          <option value="1.5">High (1920×1080)</option>
+        </select></label>
+      <label class="setting-row">Particle Quality
+        <select id="set-particles">
+          <option value="0.4">Low</option>
+          <option value="1" selected>Medium</option>
+          <option value="1.6">High</option>
+        </select></label>
+      <label class="setting-row">Animation Quality
+        <select id="set-anim">
+          <option value="low">Low</option>
+          <option value="high" selected>High</option>
+        </select></label>
+      <div class="setting-row">
+        <button class="btn small" id="btn-fullscreen">Toggle Fullscreen</button>
+        <button class="btn small btn-danger" id="btn-reset-stats">Reset Statistics</button>
+      </div>
+    </div>
+    <button class="btn btn-back" data-action="back-menu">← Back</button>
+  </div>
+
+  <!-- ============ CREDITS ============ -->
+  <div class="screen" id="screen-credits">
+    <h2 class="screen-title">Credits</h2>
+    <div class="credits-body">
+      <p><strong>Magic Outpost</strong> — Engineering Capstone Demonstration</p>
+      <p>Game design, code &amp; procedural art — <em>Your Team Name</em></p>
+      <p>Built with vanilla HTML · CSS · JavaScript · Canvas · Web Audio</p>
+      <p>Future hardware: ESP32 gesture-recognition magic wands<br>(Web Bluetooth &amp; Web Serial)</p>
+      <p class="rune-line"><img data-icon="star" class="pix-icon" alt="">
+        <img data-icon="star" class="pix-icon" alt="">
+        <img data-icon="star" class="pix-icon" alt=""></p>
+    </div>
+    <button class="btn btn-back" data-action="back-menu">← Back</button>
+  </div>
+
+</div>
+
+<!-- Modular game scripts (load order matters — plain scripts so file:// works) -->
+<script src="js/storage.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/input.js"></script>
+<script src="js/esp32.js"></script>
+<script src="js/webcam.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/backgrounds.js"></script>
+<script src="js/spell.js"></script>
+<script src="js/player.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/spritesheet.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

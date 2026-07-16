@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprite Sheet Uploader</title>
+<style>
+  body {
+    font-family: 'VT323', monospace;
+    background: linear-gradient(135deg, #fef7ff 0%, #f4fbff 60%, #eef8ff 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    margin: 0;
+  }
+  
+  .container {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 600px;
+    box-shadow: 0 8px 32px rgba(120, 142, 180, 0.2);
+    border: 2px solid #ff7ac7;
+  }
+  
+  h1 {
+    color: #ff7ac7;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 24px;
+  }
+  
+  .upload-area {
+    border: 3px dashed #7dc4ff;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .upload-area:hover {
+    border-color: #ff7ac7;
+    background: rgba(255, 122, 199, 0.05);
+  }
+  
+  .upload-area.dragover {
+    border-color: #ff7ac7;
+    background: rgba(255, 122, 199, 0.1);
+  }
+  
+  input[type="file"] {
+    display: none;
+  }
+  
+  .upload-text {
+    color: #3f4d6b;
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  
+  .upload-hint {
+    color: #8fa5d8;
+    font-size: 13px;
+  }
+  
+  .btn {
+    background: linear-gradient(135deg, #ff8fd6, #8dc9ff);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+  }
+  
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(120, 142, 180, 0.2);
+  }
+  
+  .preview {
+    margin-top: 30px;
+    text-align: center;
+  }
+  
+  .preview img {
+    max-width: 100%;
+    border-radius: 8px;
+    border: 2px solid #7dc4ff;
+  }
+  
+  .status {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    display: none;
+  }
+  
+  .status.success {
+    background: #dcf8e8;
+    color: #0f9d58;
+    display: block;
+  }
+  
+  .status.error {
+    background: #fce4ec;
+    color: #ff5fbf;
+    display: block;
+  }
+  
+  .grid-settings {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+  }
+  
+  .grid-settings label {
+    display: block;
+    margin: 10px 0 5px 0;
+    color: #3f4d6b;
+    font-size: 14px;
+  }
+  
+  .grid-settings input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: 'VT323', monospace;
+    box-sizing: border-box;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📊 Sprite Sheet Uploader</h1>
+  
+  <div class="upload-area" id="uploadArea">
+    <div class="upload-text">Click or drag your sprite sheet here</div>
+    <div class="upload-hint">Recommended: Grid sprite sheet (e.g., 6 cols × 4 rows)</div>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+  
+  <div class="grid-settings">
+    <label for="cols">Columns:</label>
+    <input type="number" id="cols" value="6" min="1" max="20">
+    
+    <label for="rows">Rows:</label>
+    <input type="number" id="rows" value="4" min="1" max="20">
+  </div>
+  
+  <button class="btn" id="processBtn" style="display: none;">Process Sprite Sheet</button>
+  
+  <div class="preview" id="preview"></div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('fileInput');
+  const preview = document.getElementById('preview');
+  const status = document.getElementById('status');
+  const processBtn = document.getElementById('processBtn');
+  const colsInput = document.getElementById('cols');
+  const rowsInput = document.getElementById('rows');
+  
+  let selectedFile = null;
+  
+  uploadArea.addEventListener('click', () => fileInput.click());
+  
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+  
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+  });
+  
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) handleFile(files[0]);
+  });
+  
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) handleFile(e.target.files[0]);
+  });
+  
+  function handleFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+        processBtn.style.display = 'inline-block';
+        status.textContent = `Loaded: ${file.name} (${img.width}×${img.height}px)`;
+        status.className = 'status success';
+      };
+      img.src = e.target.result;
+    };
+    
+    reader.readAsDataURL(file);
+  }
+  
+  processBtn.addEventListener('click', () => {
+    if (!selectedFile) return;
+    
+    const cols = parseInt(colsInput.value);
+    const rows = parseInt(rowsInput.value);
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const spriteWidth = img.width / cols;
+        const spriteHeight = img.height / rows;
+        const sprites = [];
+        
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const canvas = document.createElement('canvas');
+            canvas.width = spriteWidth;
+            canvas.height = spriteHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            
+            ctx.drawImage(
+              img,
+              col * spriteWidth, row * spriteHeight, spriteWidth, spriteHeight,
+              0, 0, spriteWidth, spriteHeight
+            );
+            
+            sprites.push(canvas.toDataURL('image/png'));
+          }
+        }
+        
+        // Save to localStorage and download as ZIP or individual files
+        localStorage.setItem('spritesheet_data', JSON.stringify({
+          file: selectedFile.name,
+          cols: cols,
+          rows: rows,
+          sprites: sprites,
+          timestamp: new Date().toISOString()
+        }));
+        
+        status.textContent = `✓ Processed ${sprites.length} sprites! Check your browser's localStorage or save them to assets/characters/.`;
+        status.className = 'status success';
+        
+        // Show download options
+        const downloadLink = document.createElement('a');
+        downloadLink.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({
+          spriteCount: sprites.length,
+          cols: cols,
+          rows: rows,
+          sprites: sprites
+        }, null, 2));
+        downloadLink.download = 'sprites.json';
+        downloadLink.textContent = 'Download sprites.json';
+        downloadLink.style.display = 'block';
+        downloadLink.style.marginTop = '10px';
+        downloadLink.style.color = '#ff7ac7';
+        downloadLink.style.textDecoration = 'none';
+        status.appendChild(downloadLink);
+      };
+      img.src = e.target.result;
+    };
+    
+    reader.readAsDataURL(selectedFile);
+  });
+</script>
+
+</body>
+</html>
